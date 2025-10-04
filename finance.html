@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>บันทึกรายรับรายจ่าย และกำไร - JK Racing</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{
+  font-family:"Kanit",sans-serif;
+  margin:0;
+  color:#fff;
+  background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
+              url('https://images.unsplash.com/photo-1597001294325-7d91de0e5b0d?auto=format&fit=crop&w=1470&q=80') no-repeat center center fixed;
+  background-size: cover;
+}
+header{
+  background:rgba(0,0,0,0.7);
+  color:#ffd700;
+  text-align:center;
+  padding:20px 0;
+  box-shadow:0 4px 10px rgba(0,0,0,.5);
+}
+header h1{margin:0;font-size:1.8rem;font-weight:700;}
+.container{
+  max-width:1000px;
+  margin:20px auto;
+  padding:20px;
+  background:rgba(30,30,30,0.9);
+  border-radius:12px;
+  box-shadow:0 4px 15px rgba(0,0,0,.7);
+}
+form{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
+form input, form button{padding:10px;border:1px solid #555;border-radius:8px;font-size:14px;flex:1;}
+form button{cursor:pointer;transition:0.3s;}
+.btn-sale{background:#28a745;color:#fff;font-weight:600;}
+.btn-sale:hover{background:#1f7a34;}
+.btn-expense{background:#dc3545;color:#fff;font-weight:600;}
+.btn-expense:hover{background:#a71d2a;}
+.btn-detail{background:#2575fc;color:#fff;}
+.btn-detail:hover{background:#1a4fa0;}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px;}
+th,td{border:1px solid #555;padding:8px;text-align:center;}
+th{background:#111;color:#ffd700;}
+td{background:rgba(50,50,50,0.8);color:#fff;}
+.summary-day{margin-top:15px;background:rgba(20,20,20,0.7);padding:15px;border-radius:10px;}
+.summary-day h3{margin-bottom:10px;color:#ffd700;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;}
+.card{background:#ffd700;color:#1c1c1c;padding:12px;border-radius:8px;text-align:center;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.5);}
+#detailModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);justify-content:center;align-items:center;z-index:999;}
+#detailModal .content{background:#1e1e1e;padding:20px;border-radius:12px;max-width:800px;width:90%;max-height:80%;overflow:auto;}
+#detailModal h2{margin-top:0;color:#ffd700;}
+#detailModal table{width:100%;border-collapse:collapse;margin-top:10px;}
+#detailModal th,#detailModal td{border:1px solid #555;padding:8px;text-align:center;}
+#detailModal th{background:#111;color:#ffd700;}
+#detailModal td{background:rgba(50,50,50,0.8);color:#fff;}
+#detailModal button{margin-top:10px;background:#dc3545;color:#fff;padding:8px 15px;border:none;border-radius:6px;cursor:pointer;}
+#detailModal button:hover{background:#a71d2a;}
+.month-selector{margin-bottom:20px; display:flex; gap:10px; align-items:center;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>บันทึกรายรับรายจ่าย และกำไร – JK Racing</h1>
+</header>
+
+<div class="container">
+
+  <!-- ฟอร์มบันทึกการขาย -->
+  <form id="saleForm">
+    <input type="date" id="saleDate" required>
+    <input type="text" id="saleDesc" placeholder="รายละเอียดสินค้า" required>
+    <input type="number" id="saleIncome" placeholder="รายรับ (ราคาขาย)" required>
+    <input type="number" id="saleCost" placeholder="ต้นทุน" required>
+    <input type="number" id="saleProfit" placeholder="กำไร (อัตโนมัติ)" readonly>
+    <button type="submit" class="btn-sale">บันทึกการขาย</button>
+  </form>
+
+  <!-- ฟอร์มบันทึกรายจ่าย -->
+  <form id="expenseForm">
+    <input type="date" id="expenseDate" required>
+    <input type="text" id="expenseDesc" placeholder="รายละเอียดรายจ่าย" required>
+    <input type="number" id="expenseAmount" placeholder="จำนวนเงิน" required>
+    <button type="submit" class="btn-expense">บันทึกรายจ่าย</button>
+  </form>
+
+  <!-- ตารางรายการ -->
+  <table>
+    <thead>
+      <tr>
+        <th>วันที่</th>
+        <th>ประเภท</th>
+        <th>รายละเอียด</th>
+        <th>รายรับ</th>
+        <th>ต้นทุน</th>
+        <th>กำไร</th>
+        <th>รายจ่าย</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+
+  <!-- สรุปรายวัน + ยอดรวม -->
+  <div id="dailySummary"></div>
+
+  <!-- ตัวเลือกสรุปรายเดือน -->
+  <div class="month-selector">
+    <label for="monthSelect">เลือกเดือน:</label>
+    <select id="monthSelect">
+      <option value="0">มกราคม</option>
+      <option value="1">กุมภาพันธ์</option>
+      <option value="2">มีนาคม</option>
+      <option value="3">เมษายน</option>
+      <option value="4">พฤษภาคม</option>
+      <option value="5">มิถุนายน</option>
+      <option value="6">กรกฎาคม</option>
+      <option value="7">สิงหาคม</option>
+      <option value="8">กันยายน</option>
+      <option value="9">ตุลาคม</option>
+      <option value="10">พฤศจิกายน</option>
+      <option value="11">ธันวาคม</option>
+    </select>
+    <label for="yearSelect">เลือกปี:</label>
+    <select id="yearSelect"></select>
+    <button class="btn-detail" onclick="showMonthlySummary()">ดูสรุปเดือน</button>
+  </div>
+
+  <!-- สรุปรายเดือน -->
+  <div id="monthlySummary"></div>
+</div>
+
+<!-- Modal -->
+<div id="detailModal">
+  <div class="content">
+    <h2 id="modalTitle"></h2>
+    <table>
+      <thead>
+        <tr>
+          <th>No.</th>
+          <th>ประเภท</th>
+          <th>รายละเอียด</th>
+          <th>รายรับ</th>
+          <th>ต้นทุน</th>
+          <th>กำไร</th>
+          <th>รายจ่าย</th>
+        </tr>
+      </thead>
+      <tbody id="modalBody"></tbody>
+    </table>
+    <button onclick="closeModal()">ปิด</button>
+  </div>
+</div>
+
+<script>
+let transactions = JSON.parse(localStorage.getItem("transactions")||"[]");
+let editingIndex = null;
+const tableBody=document.getElementById('tableBody');
+const dailySummary=document.getElementById('dailySummary');
+const yearSelect=document.getElementById("yearSelect");
+const monthSelect=document.getElementById("monthSelect");
+
+// สร้าง dropdown ปี
+const currentYear=new Date().getFullYear();
+for(let y=currentYear-5;y<=currentYear+1;y++){
+  let option=document.createElement("option");
+  option.value=y; option.textContent=y+543;
+  if(y===currentYear) option.selected=true;
+  yearSelect.appendChild(option);
+}
+
+// แปลงวันที่เป็นไทย
+function formatThaiDate(dateStr){
+  const months=["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+                "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+  const d=new Date(dateStr);
+  if(isNaN(d)) return "";
+  const day=d.getDate();
+  const month=months[d.getMonth()];
+  const year=d.getFullYear()+543;
+  return ${day} ${month} ${year};
+}
+
+// ฟอร์มบันทึกการขาย
+document.getElementById('saleForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const date=document.getElementById('saleDate').value;
+  const desc=document.getElementById('saleDesc').value;
+  const income=+document.getElementById('saleIncome').value;
+  const cost=+document.getElementById('saleCost').value;
+  const profit=income-cost;
+
+  if(editingIndex!==null){
+    transactions[editingIndex]={date,type:"รายรับ",desc,income,cost,profit,expense:0};
+    editingIndex=null;
+  }else{
+    transactions.push({date,type:"รายรับ",desc,income,cost,profit,expense:0});
+  }
+  localStorage.setItem("transactions",JSON.stringify(transactions));
+  this.reset();
+  render();
+});
+
+// ฟอร์มบันทึกรายจ่าย
+document.getElementById('expenseForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const date=document.getElementById('expenseDate').value;
+  const desc=document.getElementById('expenseDesc').value;
+  const amount=+document.getElementById('expenseAmount').value;
+
+  if(editingIndex!==null){
+    transactions[editingIndex]={date,type:"รายจ่าย",desc,income:0,cost:0,profit:0,expense:amount};
+    editingIndex=null;
+  }else{
+    transactions.push({date,type:"รายจ่าย",desc,income:0,cost:0,profit:0,expense:amount});
+  }
+  localStorage.setItem("transactions",JSON.stringify(transactions));
+  this.reset();
+  render();
+});
+
+// แก้ไข
+function editItem(index){
+  const t=transactions[index];
+  if(t.type==="รายรับ"){
+    document.getElementById('saleDate').value=t.date;
+    document.getElementById('saleDesc').value=t.desc;
+    document.getElementById('saleIncome').value=t.income;
+    document.getElementById('saleCost').value=t.cost;
+    document.getElementById('saleProfit').value=t.profit;
+  }else{
+    document.getElementById('expenseDate').value=t.date;
+    document.getElementById('expenseDesc').value=t.desc;
+    document.getElementById('expenseAmount').value=t.expense;
+  }
+  editingIndex=index;
+}
+
+// ลบ
+function confirmDelete(i){
+  if(confirm("คุณแน่ใจหรือไม่ว่าจะลบรายการนี้?")){
+    transactions.splice(i,1);
+    localStorage.setItem("transactions",JSON.stringify(transactions));
+    render();
+  }
+}
+
+// แสดง popup รายละเอียด
+function showDetail(date){
+  const modal=document.getElementById("detailModal");
+  const modalTitle=document.getElementById("modalTitle");
+  const modalBody=document.getElementById("modalBody");
+  modal.style.display="flex";
+  const dailyItems=transactions.filter(t=>t.date===date);
+  modalTitle.textContent=`รายละเอียดวันที่ ${formatThaiDate(date)} (จำนวน ${dailyItems.length} รายการ)`;
+  modalBody.innerHTML="";
+  dailyItems.forEach((t,i)=>{
+    modalBody.innerHTML+=`<tr>
+      <td>${i+1}</td>
+      <td>${t.type}</td>
+      <td>${t.desc}</td>
+      <td>${t.income}</td>
+      <td>${t.cost}</td>
+      <td>${t.profit}</td>
+      <td>${t.expense}</td>
+    </tr>`;
+  });
+}
+function closeModal(){document.getElementById("detailModal").style.display="none";}
+
+// สรุปรายเดือน
+function showMonthlySummary(){
+  const month=+monthSelect.value;
+  const year=+yearSelect.value;
+  const monthlyTransactions=transactions.filter(t=>{
+    const d=new Date(t.date);
+    return d.getMonth()===month && d.getFullYear()===year;
+  });
+  if(monthlyTransactions.length===0){
+    document.getElementById("monthlySummary").innerHTML="<p>ไม่มีรายการในเดือนนี้</p>";
+    return;
+  }
+  let totalIncome=0,totalCost=0,totalProfit=0,totalExpense=0;
+  monthlyTransactions.forEach(t=>{
+    totalIncome+=t.income;
+    totalCost+=t.cost;
+    totalProfit+=t.profit;
+    totalExpense+=t.expense;
+  });
+  const netTotal=totalProfit-totalExpense;
+  document.getElementById("monthlySummary").innerHTML=`
+    <div class="summary-day">
+      <h3>📅 สรุปเดือน ${monthSelect.options[month].text} พ.ศ.${year+543}</h3>
+      <div class="grid">
+        <div class="card">💰 รายรับรวม: ${totalIncome}</div>
+        <div class="card">📦 ต้นทุนรวม: ${totalCost}</div>
+        <div class="card">📈 กำไรรวม: ${totalProfit}</div>
+        <div class="card">💸 รายจ่ายรวม: ${totalExpense}</div>
+        <div class="card">✅ ยอดสุทธิ: ${netTotal}</div>
+      </div>
+    </div>`;
+}
+
+// Render ตาราง + สรุปรายวัน + ยอดรวมทั้งหมด
+function render(){
+  tableBody.innerHTML='';
+  const grouped={};
+  let totalIncome=0,totalCost=0,totalProfit=0,totalExpense=0;
+
+  transactions.forEach((t,i)=>{
+    tableBody.innerHTML+=`<tr>
+      <td>${formatThaiDate(t.date)}</td>
+      <td>${t.type}</td>
+      <td>${t.desc}</td>
+      <td>${t.income}</td>
+      <td>${t.cost}</td>
+      <td>${t.profit}</td>
+      <td>${t.expense}</td>
+      <td>
+        <button onclick="editItem(${i})">แก้ไข</button>
+        <button onclick="confirmDelete(${i})">ลบ</button>
+      </td>
+    </tr>`;
+    if(!grouped[t.date]) grouped[t.date]={รายรับ:0,ต้นทุน:0,กำไร:0,รายจ่าย:0,items:[]};
+    grouped[t.date].items.push(t);
+    if(t.type==="รายรับ"){
+      grouped[t.date].รายรับ+=t.income;
+      grouped[t.date].ต้นทุน+=t.cost;
+      grouped[t.date].กำไร+=t.profit;
+      totalIncome+=t.income;
+      totalCost+=t.cost;
+      totalProfit+=t.profit;
+    }
+    if(t.type==="รายจ่าย"){
+      grouped[t.date].รายจ่าย+=t.expense;
+      totalExpense+=t.expense;
+    }
+  });
+
+  dailySummary.innerHTML='';
+  for(const [date,vals] of Object.entries(grouped)){
+    const netTotal=vals.กำไร-vals.รายจ่าย;
+    dailySummary.innerHTML+=`
+      <div class="summary-day">
+        <h3>📅 ${formatThaiDate(date)}</h3>
+        <div class="grid">
+          <div class="card">💰 รายรับรวม: ${vals.รายรับ}</div>
+          <div class="card">📦 ต้นทุนรวม: ${vals.ต้นทุน}</div>
+          <div class="card">📈 กำไรรวม: ${vals.กำไร}</div>
+          <div class="card">💸 รายจ่ายรวม: ${vals.รายจ่าย}</div>
+          <div class="card">✅ ยอดสุทธิ: ${netTotal}</div>
+          <button class="btn-detail" onclick="showDetail('${date}')">🔍 รายละเอียด</button>
+        </div>
+      </div>`;
+  }
+
+  // ยอดรวมทั้งหมด
+  dailySummary.innerHTML+=`
+    <div class="summary-day" style="background:#111;color:#ffd700;">
+      <h3>📊 ยอดรวมทั้งหมด</h3>
+      <div class="grid">
+        <div class="card">💰 รายรับทั้งหมด: ${totalIncome}</div>
+        <div class="card">📦 ต้นทุนทั้งหมด: ${totalCost}</div>
+        <div class="card">📈 กำไรทั้งหมด: ${totalProfit}</div>
+        <div class="card">💸 รายจ่ายทั้งหมด: ${totalExpense}</div>
+        <div class="card">✅ ยอดสุทธิทั้งหมด: ${totalProfit-totalExpense}</div>
+      </div>
+    </div>`;
+}
+
+render();
+</script>
+</body>
+</html>
